@@ -10,9 +10,7 @@ use GuzzleHttp\Exception;
 
 class SocialController extends Controller
 {
-    private const TWITCH_API_HOST = 'https://api.twitch.tv/helix/';
     private const TWITCH_ENDPOINT_STREAMS = 'streams';
-    private const TWITCH_CLIENT_ID = '';  #@todo let's make a separate config (singleton/static?)
 
     /**
      * @Route("/social", name="home")
@@ -66,8 +64,8 @@ class SocialController extends Controller
         try {
             $response = $client->request(
                 'GET',
-                self::TWITCH_API_HOST . SELF::TWITCH_ENDPOINT_STREAMS,
-                ['headers' => ['Client-ID' => self::TWITCH_CLIENT_ID]]
+                $this->getParameter('twitch')['api_host'] . SELF::TWITCH_ENDPOINT_STREAMS,
+                ['headers' => ['Client-ID' => $this->getParameter('twitch')['client_id']]]
             );
         }catch (Exception\RequestException $guzzle_ex)
         {

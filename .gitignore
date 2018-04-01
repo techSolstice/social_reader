@@ -72,3 +72,6 @@ fabric.properties
 
 # Editor-based Rest Client
 .idea/httpRequests
+
+#Application API Configuration including keys
+config/apis.yml

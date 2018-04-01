@@ -54,7 +54,7 @@ class SocialController extends Controller
     {
         $response = $this->request_twitch_streams();
         return $this->render('social/twitch.html.twig',[
-            'controller_name' => 'SocialController', 'json_response' => $response,
+            'controller_name' => 'SocialController', 'streams_array' => $response,
         ]);
     }
 
@@ -64,16 +64,19 @@ class SocialController extends Controller
         try {
             $response = $client->request(
                 'GET',
-                $this->getParameter('twitch')['api_host'] . SELF::TWITCH_ENDPOINT_STREAMS,
+                $this->getParameter('twitch')['api_host'] . self::TWITCH_ENDPOINT_STREAMS,
                 ['headers' => ['Client-ID' => $this->getParameter('twitch')['client_id']]]
             );
-        }catch (Exception\RequestException $guzzle_ex)
+
+            $streams_array = json_decode($response->getBody(), true)['data'];
+
+        }catch (Exception\GuzzleException $guzzle_ex)
         {
-            $response = $guzzle_ex->getResponse();
+            $streams_array = array();
         }
         #@todo assert that we have a reasonable number
 
-        return $response->getBody();
+        return $streams_array;
     }
 
 }

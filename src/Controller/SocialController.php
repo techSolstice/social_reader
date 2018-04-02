@@ -4,9 +4,9 @@ namespace App\Controller;
 
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use Symfony\Component\HttpFoundation\Request;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception;
+use App\Service\ApiKey;
 
 class SocialController extends Controller
 {
@@ -22,6 +22,18 @@ class SocialController extends Controller
         ]);
     }
 
+    /**
+     * @Route("/test")
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function twitter_index(ApiKey $apikey)
+    {
+        $access_token = $apikey->retrieve_token($apikey::TWITTER_API_NAME, 'access_token');
+
+        return $this->render('social/twitter.html.twig', [
+            'controller_name' => 'SocialController', 'access_token' => $access_token
+        ]);
+    }
 
     /**
      * @Route("/social/{medium}"), requirements={"medium"="twitter|reddit|youtube|twitch"}
@@ -43,12 +55,6 @@ class SocialController extends Controller
         return $medium_response;
     }
 
-    private function twitter_index()
-    {
-        return $this->render('social/twitter.html.twig', [
-            'controller_name' => 'SocialController',
-        ]);
-    }
 
     private function twitch_index()
     {
@@ -78,5 +84,9 @@ class SocialController extends Controller
 
         return $streams_array;
     }
+
+    /*private function request_twitter_streams()
+    {
+    }*/
 
 }

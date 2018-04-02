@@ -7,33 +7,19 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception;
 use App\Service\ApiKey;
+use App\Service\TwitchService;
+use App\Service\TwitterService;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 
 class SocialController extends Controller
 {
-    private const TWITCH_ENDPOINT_STREAMS = 'streams';
-
-    /**
-     * @Route("/social", name="home")
-     */
-    public function index()
-    {
-        return $this->render('social/index.html.twig', [
-            'controller_name' => 'SocialController',
-        ]);
-    }
 
     /**
      * @Route("/test")
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function twitter_index(ApiKey $apikey)
-    {
-        $access_token = $apikey->retrieve_token($apikey::TWITTER_API_NAME, 'access_token');
 
-        return $this->render('social/twitter.html.twig', [
-            'controller_name' => 'SocialController', 'access_token' => $access_token
-        ]);
-    }
 
     /**
      * @Route("/social/{medium}"), requirements={"medium"="twitter|reddit|youtube|twitch"}
@@ -43,10 +29,11 @@ class SocialController extends Controller
         switch($medium)
         {
             case 'twitter':
-                $medium_response = $this->twitter_index();
+                $medium_response = $this->twitter_index(new TwitterService($this->getDoctrine()->getManager(), $this->container),
+                                                        new ApiKey($this->getDoctrine()->getManager(), $this->container));
                 break;
             case 'twitch':
-                $medium_response = $this->twitch_index();
+                $medium_response = $this->twitch_index(new TwitchService($this->container));
             #@todo Account for invalid values and 404 or find better practice for requirements whitelist
         }
 
@@ -55,38 +42,21 @@ class SocialController extends Controller
         return $medium_response;
     }
 
-
-    private function twitch_index()
+    private function twitch_index(TwitchService $twitchService)
     {
-        $response = $this->request_twitch_streams();
+        $response = $twitchService->request_twitch_streams();
         return $this->render('social/twitch.html.twig',[
             'controller_name' => 'SocialController', 'streams_array' => $response,
         ]);
     }
 
-    private function request_twitch_streams($num_streams='20')
+    public function twitter_index(TwitterService $twitterService, ApiKey $apikey)
     {
-        $client = new Client();
-        try {
-            $response = $client->request(
-                'GET',
-                $this->getParameter('twitch')['api_host'] . self::TWITCH_ENDPOINT_STREAMS,
-                ['headers' => ['Client-ID' => $this->getParameter('twitch')['client_id']]]
-            );
-
-            $streams_array = json_decode($response->getBody(), true)['data'];
-
-        }catch (Exception\GuzzleException $guzzle_ex)
-        {
-            $streams_array = array();
-        }
-        #@todo assert that we have a reasonable number
-
-        return $streams_array;
+        $access_token = $twitterService->retrieve_access_token($apikey, $twitterService);
+        return $this->render('social/twitter.html.twig', [
+            'controller_name' => 'SocialController', 'access_token' => $access_token
+        ]);
     }
 
-    /*private function request_twitter_streams()
-    {
-    }*/
 
 }

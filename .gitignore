@@ -74,4 +74,4 @@ fabric.properties
 .idea/httpRequests
 
 #Application API Configuration including keys
-config/apis.yml
+config/apis.yaml

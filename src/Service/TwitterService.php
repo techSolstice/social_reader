@@ -13,26 +13,29 @@ class TwitterService
     const TWITTER_OAUTH_ENDPOINT = 'oauth2/token';
     const TWITTER_STATUS_SAMPLING_ENDPOINT = 'statuses/sample.json';
 
-    public function __construct(EntityManagerInterface $em, ContainerInterface $container)
+    protected $em;
+    protected $container;
+    protected $apiKeyCache;
+
+    public function __construct(ContainerInterface $container, EntityManagerInterface $em)
     {
-        $this->em = $em;
         $this->container = $container;
+        $this->apiKeyCache = new ApiKey($em, $this->container);
     }
 
-    public function retrieve_access_token(ApiKey $apikey, TwitterService $twitterService)
+    public function retrieve_access_token()
     {
-        $access_token = $apikey->retrieve_token(self::TWITTER_API_NAME, 'access_token');
+        $access_token = $this->apiKeyCache->retrieve_token(self::TWITTER_API_NAME, 'access_token');
 
         if (!$access_token)
         {
-            $bearer_token = $twitterService->assemble_bearer_token();
-            $access_token = $twitterService->generate_access_token($bearer_token);
-            $entity_manager = $this->em;
-            $twitterService->cache_access_token(new ApiKey($entity_manager, $this->container),
-                                                $this->get_consumer_key(),
-                                                $this->get_consumer_secret(),
-                                                $access_token
-                                                );
+            $bearer_token = $this->assemble_bearer_token();
+            $access_token = $this->generate_access_token($bearer_token);
+            $this->cache_access_token($this->apiKeyCache,
+                                      $this->get_consumer_key(),
+                                      $this->get_consumer_secret(),
+                                      $access_token
+                                     );
         }
 
         return $access_token;
@@ -99,9 +102,14 @@ class TwitterService
 
     public function form_auth_string()
     {
-        'OAuth oauth_consumer_key=”' . $this->get_consumer_key() . '”, oauth_nonce=”' . $this->get_consumer_secret() .
-        '”, oauth_signature=”' . $oauth_sig . '”, oauth_signature_method=”HMAC-SHA1”, oauth_timestamp=”' .
-        '”, oauth_token=”' . $generated_access_token . '",oauth_version=”1.0”';
+        $auth_string =
+        'OAuth oauth_consumer_key=”' . $this->get_consumer_key() .
+        '”, oauth_nonce=”' . $this->get_consumer_secret() .
+        '”, oauth_signature=”' . $oauth_sig .
+        '”, oauth_signature_method=”HMAC-SHA1”, oauth_timestamp=”' .
+        '”, oauth_token=”' . $this->generate_access_token($this->assemble_bearer_token()) . '",oauth_version=”1.0”';
+
+        return $auth_string;
     }
 
     public function request_status_sample()

@@ -4,8 +4,6 @@ namespace App\Controller;
 
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception;
 use App\Service\ApiKey;
 use App\Service\TwitchService;
 use App\Service\TwitterService;
@@ -15,25 +13,31 @@ use Doctrine\ORM\EntityManagerInterface;
 class SocialController extends Controller
 {
 
-    /**
-     * @Route("/test")
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
+    protected $twitterService;
+    protected $twitchService;
+    protected $apiKeyCache;
 
+    /*public function __construct()
+    {
+        //$this->twitterService = new TwitterService($this->container, $this->apiKeyCache);
+
+    }*/
 
     /**
-     * @Route("/social/{medium}"), requirements={"medium"="twitter|reddit|youtube|twitch"}
+     * @Route("/social/{medium}"), requirements={"medium"="twitter|twitch"}
      */
     public function serve_medium($medium)
     {
+        //$this->twitchService = new TwitchService($this->container);
+        $this->twitterService = new TwitterService($this->container);
+
         switch($medium)
         {
             case 'twitter':
-                $medium_response = $this->twitter_index(new TwitterService($this->getDoctrine()->getManager(), $this->container),
-                                                        new ApiKey($this->getDoctrine()->getManager(), $this->container));
+                $medium_response = $this->twitter_index();
                 break;
             case 'twitch':
-                $medium_response = $this->twitch_index(new TwitchService($this->container));
+                $medium_response = $this->twitch_index($this->twitchService);
             #@todo Account for invalid values and 404 or find better practice for requirements whitelist
         }
 
@@ -50,9 +54,9 @@ class SocialController extends Controller
         ]);
     }
 
-    public function twitter_index(TwitterService $twitterService, ApiKey $apikey)
+    public function twitter_index()
     {
-        $access_token = $twitterService->retrieve_access_token($apikey, $twitterService);
+        $access_token = $this->twitterService->retrieve_access_token();
         return $this->render('social/twitter.html.twig', [
             'controller_name' => 'SocialController', 'access_token' => $access_token
         ]);

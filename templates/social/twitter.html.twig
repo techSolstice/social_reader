@@ -13,7 +13,11 @@
     <h1>Twitter Feed</h1>
 
     Some collection of sorts of Twitter posts will appear here, in a future commit.  Lorem Ipsum text.
+    {{ oauth }}
 
+    {% for stream in streams_array %}
+        {{ stream.statuses }}
+    {% endfor %}
 
 </div>
 {% endblock %}

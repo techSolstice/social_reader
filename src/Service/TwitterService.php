@@ -11,19 +11,26 @@ class TwitterService
 {
     const TWITTER_API_NAME = 'twitter';
     const TWITTER_OAUTH_ENDPOINT = 'oauth2/token';
-    const TWITTER_STATUS_SAMPLING_ENDPOINT = 'statuses/sample.json';
+    const TWITTER_STATUS_SAMPLING_ENDPOINT = 'search/tweets.json';
 
     protected $em;
-    protected $container;
     protected $apiKeyCache;
+    protected $apiHost;
+    protected $oauthHost;
+    protected $consumerKey;
+    protected $consumerSecret;
 
-    public function __construct(ContainerInterface $container, EntityManagerInterface $em)
+    public function __construct(EntityManagerInterface $em, ApiKey $apiKeyCache, $api_host, $oauth_host, $consumer_key, $consumer_secret)
     {
-        $this->container = $container;
-        $this->apiKeyCache = new ApiKey($em, $this->container);
+        $this->em = $em;
+        $this->apiKeyCache = $apiKeyCache;
+        $this->apiHost = $api_host;
+        $this->oauthHost = $oauth_host;
+        $this->consumerKey = $consumer_key;
+        $this->consumerSecret = $consumer_secret;
     }
 
-    public function retrieve_access_token()
+    public function retrieve_access_token() : string
     {
         $access_token = $this->apiKeyCache->retrieve_token(self::TWITTER_API_NAME, 'access_token');
 
@@ -32,8 +39,8 @@ class TwitterService
             $bearer_token = $this->assemble_bearer_token();
             $access_token = $this->generate_access_token($bearer_token);
             $this->cache_access_token($this->apiKeyCache,
-                                      $this->get_consumer_key(),
-                                      $this->get_consumer_secret(),
+                                      $this->consumerKey,
+                                      $this->consumerSecret,
                                       $access_token
                                      );
         }
@@ -41,34 +48,22 @@ class TwitterService
         return $access_token;
     }
 
-    protected function get_consumer_key()
-    {
-        return $this->container->getParameter(self::TWITTER_API_NAME)['consumer_key'];
-    }
-
-    protected function get_consumer_secret()
-    {
-        return $this->container->getParameter(self::TWITTER_API_NAME)['consumer_secret'];
-    }
-
     public function assemble_bearer_token() : string
     {
-        $consumer_key = $this->get_consumer_key();
-        $consumer_secret = $this->get_consumer_secret();
-
-        return base64_encode($consumer_key . ':' . $consumer_secret);
+        return base64_encode($this->consumerKey . ':' . $this->consumerSecret);
     }
 
-    public function generate_access_token($bearer_token) : string
+    private function generate_access_token($bearer_token) : string
     {
         $client = new Client();
         try {
             $response = $client->request(
                 'POST',
-                $this->container->getParameter('twitter')['oauth_host'] . self::TWITTER_OAUTH_ENDPOINT,
+                $this->oauthHost . self::TWITTER_OAUTH_ENDPOINT,
                 ['headers' => array('Authorization' => 'Basic ' . $bearer_token,
-                    'Content-Type' => 'application/x-www-form-urlencoded;charset=UTF-8'),
-                    'body' => 'grant_type=client_credentials'
+                                    'Content-Type' => 'application/x-www-form-urlencoded;charset=UTF-8'
+                                   ),
+                 'body' => 'grant_type=client_credentials'
                 ]
             );
 
@@ -100,16 +95,54 @@ class TwitterService
      * Organize the below into a separate service and refactor this as an auth service
      */
 
-    public function form_auth_string()
+    public function get_query_string_array() : array
     {
-        $auth_string =
-        'OAuth oauth_consumer_key=”' . $this->get_consumer_key() .
-        '”, oauth_nonce=”' . $this->get_consumer_secret() .
-        '”, oauth_signature=”' . $oauth_sig .
-        '”, oauth_signature_method=”HMAC-SHA1”, oauth_timestamp=”' .
-        '”, oauth_token=”' . $this->generate_access_token($this->assemble_bearer_token()) . '",oauth_version=”1.0”';
+        return array(
+                'oauth_consumer_key' => $this->consumerKey,
+                'oauth_nonce' => $this->consumerSecret,
+                'oauth_timestamp' => strval(time()),
+                'oauth_token' => $this->retrieve_access_token(),
+                'oauth_version' => '1.0'
+        );
+    }
 
-        return $auth_string;
+    private function generate_sig_base_string($method, $host, $endpoint, $parameterArray)
+    {
+        return rawurlencode($method) . '&' . rawurlencode($host . $endpoint) . '&' . http_build_query($parameterArray, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private function get_signing_key($consumer_secret, $token_secret)
+    {
+        return rawurlencode($consumer_secret) . '&' . rawurlencode($token_secret);
+    }
+
+    private function generated_signature($sig_base_string, $signing_key)
+    {
+        return base64_encode(strtoupper(hash_hmac('sha1', $sig_base_string, $signing_key)));
+    }
+
+    public function compose_oauth_string() : string
+    {
+        $oauth_string = 'OAuth ';
+        $sig_base_string = $this->generate_sig_base_string('PUT', $this->apiHost, $this::TWITTER_STATUS_SAMPLING_ENDPOINT, $this->get_query_string_array());
+        $oauth_array = $this->get_query_string_array();
+        $oauth_array['oauth_signature'] = $this->generated_signature($sig_base_string, $this->get_signing_key($this->consumerSecret, $this->retrieve_access_token()));
+        $oauth_array['oauth_signature_method'] = 'HMAC-SHA1';
+
+        ksort($oauth_array);
+
+        $counter = 0;
+        foreach ($oauth_array as $key => $value)
+        {
+            if (++$counter != 1)
+            {
+                $oauth_string .= ', ';
+            }
+
+            $oauth_string .= rawurlencode($key) . '="' . rawurlencode($value) . '"';
+        }
+
+        return $oauth_string;
     }
 
     public function request_status_sample()
@@ -118,17 +151,20 @@ class TwitterService
         try {
             $response = $client->request(
                 'GET',
-                $this->container->getParameter('twitter')['api_host'] . self::TWITTER_STATUS_SAMPLING_ENDPOINT,
-                ['headers' => ['authorization' => $this->container->getParameter('twitch')['client_id']]]
+                $this->apiHost . self::TWITTER_STATUS_SAMPLING_ENDPOINT,
+                ['headers' => ['authorization' => $this->compose_oauth_string()],
+                 'query' => ['q' => 'vegas']
+                ]
             );
 
             $streams_array = json_decode($response->getBody(), true)['data'];
 
         }catch (Exception\GuzzleException $guzzle_ex)
         {
+            echo $guzzle_ex->getMessage();
+            echo $guzzle_ex->getTraceAsString();
             $streams_array = array();
         }
-        #@todo assert that we have a reasonable number
 
         return $streams_array;
     }

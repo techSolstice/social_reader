@@ -9,11 +9,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class TwitchService
 {
     private const TWITCH_ENDPOINT_STREAMS = 'streams';
+    protected $api_host;
+    protected $client_id;
 
     // Allow Doctrine and YAML parameters to be accessible in this object
-    public function __construct(ContainerInterface $container)
+    public function __construct($api_host, $client_id)
     {
-        $this->container = $container;
+        $this->api_host = $api_host;
+        $this->client_id = $client_id;
     }
 
     public function request_twitch_streams($num_streams='20') : array
@@ -22,8 +25,8 @@ class TwitchService
         try {
             $response = $client->request(
                 'GET',
-                $this->container->getParameter('twitch')['api_host'] . self::TWITCH_ENDPOINT_STREAMS,
-                ['headers' => ['Client-ID' => $this->container->getParameter('twitch')['client_id']]]
+                $this->api_host . self::TWITCH_ENDPOINT_STREAMS,
+                ['headers' => ['Client-ID' => $this->client_id]]
             );
 
             $streams_array = json_decode($response->getBody(), true)['data'];

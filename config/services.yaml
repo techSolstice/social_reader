@@ -30,12 +30,13 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
     App\Service\TwitterService:
-        autowire: true
-        public: true
-
-    App\Repository\ApiKeyCacheRepository:
-        factory: doctrine.orm.entity_manager:getRepository
         arguments:
-            - App\Entity\ApiKeyCache
-    Doctrine\ORM\EntitymanagerInterface:
-        alias: '@doctrine.orm.default_entity_manager'
+            $api_host: '%env(TWITTER_API_HOST)%'
+            $oauth_host: '%env(TWITTER_OAUTH_HOST)%'
+            $consumer_key: '%env(TWITTER_CONSUMER_KEY)%'
+            $consumer_secret: '%env(TWITTER_CONSUMER_SECRET)%'
+
+    App\Service\TwitchService:
+        arguments:
+            $api_host: '%env(TWITCH_API_HOST)%'
+            $client_id: '%env(TWITCH_CLIENT_ID)%'

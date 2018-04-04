@@ -7,6 +7,15 @@
     body {background-color: #666699; color: #FFF;}
     .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
     .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
+    a {
+        background-color: cornflowerblue;
+        color: white;
+        padding: 0.5em 1em;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+    }
+    a:hover{background-color: darkred;}
 </style>
 
 <div class="example-wrapper">
@@ -15,7 +24,7 @@
     This is my practice site learning Symfony.  It is basic and its purpose is to be able to connect to various APIs and act as a feed of sorts.
 
     <br><br>
-    <a href="/social/twitch">Click here to see the Twitch feed!</a><br>
+    <a href="/social/twitch">Click here to see the Twitch feed!</a><br><br>
     <a href="/social/twitter">Click here to see the Twitter feed!</a>
 </div>
 {% endblock %}

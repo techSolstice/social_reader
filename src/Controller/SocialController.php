@@ -24,11 +24,12 @@ class SocialController extends Controller
     }
 
     /**
-     * @Route("/social/twitter/{search_query}")
+     * @Route("/social/twitter/{search_query}", defaults={"search_query"="vegas"})
+     * @param string $search_query
      * @param TwitterService $twitterService
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function twitter_index($search_query = 'vegas', TwitterService $twitterService)
+    public function twitter_index($search_query, TwitterService $twitterService)
     {
         // Validate user input is alphanumeric.  Otherwise, default search string before passing to service.
         if (ctype_alnum($search_query) !== true){$search_query = 'vegas';}

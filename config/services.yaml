@@ -3,9 +3,6 @@
 parameters:
     locale: 'en'
 
-imports:
-    - { resource: apis.yaml }
-
 services:
     # default configuration for services in *this* file
     _defaults:

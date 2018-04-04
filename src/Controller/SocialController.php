@@ -24,17 +24,23 @@ class SocialController extends Controller
     }
 
     /**
-     * @Route("/social/twitter/")
+     * @Route("/social/twitter/{search_query}")
      * @param TwitterService $twitterService
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function twitter_index(TwitterService $twitterService)
+    public function twitter_index($search_query = 'vegas', TwitterService $twitterService)
     {
-        $access_token = $twitterService->retrieve_access_token();
-        print_r($twitterService->request_status_sample());
-        return $this->render('social/twitter.html.twig', [
-            'controller_name' => 'SocialController', 'access_token' => $access_token, 'oauth' => $twitterService->compose_oauth_string(), 'streams_array' => $twitterService->request_status_sample()
-        ]);
+        // Validate user input is alphanumeric.  Otherwise, default search string before passing to service.
+        if (ctype_alnum($search_query) !== true){$search_query = 'vegas';}
+        $twitterService->set_endpoint_argument($search_query);
+
+        return $this->render('social/twitter.html.twig',
+            [
+                'controller_name' => 'SocialController',
+                'streams_array' => $twitterService->request_status_sample(),
+                'search_string' => $search_query
+            ]
+        );
     }
 
 }

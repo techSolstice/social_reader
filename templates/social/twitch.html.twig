@@ -10,20 +10,24 @@
     .post_heading { font-size: 1.5em }
     .post_even { padding: 1em; background: rgb(211, 200, 233); color: #000;}
     .post_odd { padding: 1em; background: rgb(238, 238, 238); color: #000;}
-    .stream_type { color: #333;}
+    .stream_type { color: red;}
+    td {padding: 10px;}
 </style>
 
 <div class="example-wrapper">
     <h1>Twitch Feed</h1>
 
     {% for stream in streams_array %}
-        <div class="{{ cycle(['post_even','post_odd'], loop.index0) }} %}">
+        <div class="{{ cycle(['post_even','post_odd'], loop.index0) }}">
             <table>
-                <tr><td><img src="{{ stream.thumbnail_url | replace({'{width}': '200', '{height}': '100'}) }}"></td></tr>
-            <tr><td>
-                <span class="post_heading">{{ stream.title }}</span><br>
-                <span class="stream_type">{{ stream.type }}</span> | <span class="viewer_count">{{ stream.viewer_count }} viewers</span>
-                </td></tr>
+                <tr>
+                    <td>
+                        <img src="{{ stream.thumbnail_url | replace({'{width}': '200', '{height}': '100'}) }}"></td>
+                    <td>
+                        <span class="post_heading">{{ stream.title }}</span><br>
+                        <span class="stream_type">{{ stream.type }}</span> | <span class="viewer_count">{{ stream.viewer_count }} viewers</span>
+                    </td>
+                </tr>
             </table>
 
         </div>
